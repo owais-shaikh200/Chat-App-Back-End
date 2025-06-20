@@ -1,5 +1,6 @@
 import {CustomAPIError} from "../utils/customError.js";
 const errorHandlerMiddleware = (err, req, res, next) => {
+  console.error("Error:", err);
   if (err instanceof CustomAPIError) {
     return res.status(err.statusCode).json({ msg: err.message });
   }
