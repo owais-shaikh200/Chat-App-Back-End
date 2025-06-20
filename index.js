@@ -6,6 +6,7 @@ import { port } from "./config/envConfig.js";
 import { errorHandlerMiddleware, notFoundError } from "./middlewares/errorHandler.js";
 import { authRoutes, chatRoutes, messageRoutes } from "./routes/index.js";
 import { socketHandler } from "./socket/socketHandler.js";
+import httpStatus from "./utils/httpStatus.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -23,7 +24,7 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 
 app.get("/", (req, res) => {
-  res.status(200).send("Welcome to the Chat App API!");
+  res.status(httpStatus.OK).send("Welcome to the Chat App API!");
 });
 
 app.use(notFoundError);

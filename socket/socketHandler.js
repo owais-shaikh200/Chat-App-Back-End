@@ -1,35 +1,40 @@
 import socketAuth from "../middlewares/socketAuth.js";
-import Message from "../models/Message.js";
+import {
+  handleJoinChat,
+  handleTyping,
+  handleStopTyping,
+} from "./chatEvents.js";
+
+import { 
+    handleNewMessage, 
+    handleMessageRead, 
+    handleMessageDelivered 
+} from "./messageEvents.js";
+
+import {
+  handleUserConnect,
+  handleUserDisconnect,
+} from "./userPresenceEvents.js";
 
 export const socketHandler = (io) => {
   io.use(socketAuth);
 
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     console.log(`Socket connected: ${socket.userId}`);
 
-    socket.on("joinChat", (chatId) => {
-      socket.join(chatId);
-      console.log(`User ${socket.userId} joined chat ${chatId}`);
-    });
+    await handleUserConnect(socket, io);
 
-    socket.on("newMessage", async (data) => {
-      const { chatId, content } = data;
+    socket.on("joinChat", handleJoinChat(socket));
+    socket.on("typing", handleTyping(socket));
+    socket.on("stopTyping", handleStopTyping(socket));
+    socket.on("newMessage", handleNewMessage(socket, io));
+    socket.on("messageRead", handleMessageRead(socket));
+    socket.on("messageDelivered", handleMessageDelivered(socket));
+    
 
-      const message = await Message.create({
-        chatId,
-        sender: socket.userId,
-        content,
-      });
-
-      const fullMessage = await Message.findById(message._id)
-        .populate("sender", "username email")
-        .populate("chatId");
-
-      io.to(chatId).emit("messageReceived", fullMessage);
-    });
-
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log(`Socket disconnected: ${socket.userId}`);
+      await handleUserDisconnect(socket, io);
     });
   });
 };

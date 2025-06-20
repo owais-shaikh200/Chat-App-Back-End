@@ -1,13 +1,14 @@
 import Chat from "../models/Chat.js";
 import asyncWrapper from "../middlewares/asyncWrapper.js";
 import { createCustomError } from "../utils/customError.js";
+import HTTP_STATUS from "../utils/httpStatus.js";
 
 export const accessPrivateChat = asyncWrapper(async (req, res, next) => {
   const { userId } = req.body;
   const { userId: currentUserId } = req.user;
 
   if (!userId) {
-    return next(createCustomError("UserId is required", 400));
+    return next(createCustomError("UserId is required", HTTP_STATUS.BAD_REQUEST));
   }
 
   let chat = await Chat.findOne({
@@ -15,7 +16,7 @@ export const accessPrivateChat = asyncWrapper(async (req, res, next) => {
     users: { $all: [currentUserId, userId] },
   }).populate("users", "-password");
 
-  if (chat) return res.status(200).json(chat);
+  if (chat) return res.status(HTTP_STATUS.OK).json(chat);
 
   const newChat = await Chat.create({
     chatName: "Private Chat",
@@ -24,7 +25,7 @@ export const accessPrivateChat = asyncWrapper(async (req, res, next) => {
   });
 
   const fullChat = await Chat.findById(newChat._id).populate("users", "-password");
-  res.status(201).json(fullChat);
+  res.status(HTTP_STATUS.CREATED).json(fullChat);
 });
 
 export const createGroupChat = asyncWrapper(async (req, res, next) => {
@@ -32,7 +33,7 @@ export const createGroupChat = asyncWrapper(async (req, res, next) => {
   const { userId } = req.user;
 
   if (!name || !users || users.length < 2) {
-    return next(createCustomError("Group chat requires name and at least 2 users", 400));
+    return next(createCustomError("Group chat requires name and at least 2 users", HTTP_STATUS.BAD_REQUEST));
   }
 
   const groupUsers = [...users, userId];
@@ -48,13 +49,13 @@ export const createGroupChat = asyncWrapper(async (req, res, next) => {
     .populate("users", "-password")
     .populate("admin", "-password");
 
-  res.status(201).json(fullGroupChat);
+  res.status(HTTP_STATUS.CREATED).json(fullGroupChat);
 });
 
 export const getUserChats = asyncWrapper(async (req, res, next) => {
   const { userId } = req.user;
     if (!userId) {
-        return next(createCustomError("User ID is required", 400));
+        return next(createCustomError("User ID is required", HTTP_STATUS.BAD_REQUEST));
     }
 
   const chats = await Chat.find({ users: userId })
@@ -62,7 +63,7 @@ export const getUserChats = asyncWrapper(async (req, res, next) => {
     .populate("admin", "-password")
     .sort({ updatedAt: -1 });
 
-  res.status(200).json(chats);
+  res.status(HTTP_STATUS.OK).json(chats);
 });
 
 export const leaveGroupChat = asyncWrapper(async (req, res, next) => {
@@ -72,11 +73,11 @@ export const leaveGroupChat = asyncWrapper(async (req, res, next) => {
   const chat = await Chat.findById(chatId);
 
   if (!chat || !chat.isGroupChat) {
-    return next(createCustomError("Group chat not found", 404));
+    return next(createCustomError("Group chat not found", HTTP_STATUS.NOT_FOUND));
   }
 
   if (!chat.users.includes(userId)) {
-    return next(createCustomError("You are not a member of this group", 400));
+    return next(createCustomError("You are not a member of this group", HTTP_STATUS.BAD_REQUEST));
   }
 
   chat.users = chat.users.filter((id) => id.toString() !== userId);
@@ -88,10 +89,10 @@ export const leaveGroupChat = asyncWrapper(async (req, res, next) => {
     } else {
 
       await Chat.findByIdAndDelete(chatId);
-      return res.status(200).json({ msg: "Group deleted as last user left" });
+      return res.status(HTTP_STATUS.OK).json({ msg: "Group deleted as last user left" });
     }
   }
 
   await chat.save();
-  res.status(200).json({ msg: "You have left the group" });
+  res.status(HTTP_STATUS.OK).json({ msg: "You have left the group" });
 });

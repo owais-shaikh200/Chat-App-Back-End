@@ -17,6 +17,34 @@ const messageSchema = new mongoose.Schema(
       required: [true, "Message content is required"],
       trim: true,
     },
+    readBy: [
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    seenAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
+deliveredTo: [
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    deliveredAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    }
   },
   { timestamps: true }
 );
