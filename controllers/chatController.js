@@ -64,3 +64,34 @@ export const getUserChats = asyncWrapper(async (req, res, next) => {
 
   res.status(200).json(chats);
 });
+
+export const leaveGroupChat = asyncWrapper(async (req, res, next) => {
+  const { chatId } = req.params;
+  const { userId } = req.user;
+
+  const chat = await Chat.findById(chatId);
+
+  if (!chat || !chat.isGroupChat) {
+    return next(createCustomError("Group chat not found", 404));
+  }
+
+  if (!chat.users.includes(userId)) {
+    return next(createCustomError("You are not a member of this group", 400));
+  }
+
+  chat.users = chat.users.filter((id) => id.toString() !== userId);
+
+  if (chat.groupAdmin?.toString() === userId) {
+    if (chat.users.length > 0) {
+      
+      chat.groupAdmin = chat.users[0];
+    } else {
+
+      await Chat.findByIdAndDelete(chatId);
+      return res.status(200).json({ msg: "Group deleted as last user left" });
+    }
+  }
+
+  await chat.save();
+  res.status(200).json({ msg: "You have left the group" });
+});
